@@ -33,8 +33,8 @@
   ],
   "name":"Room_Templatee",
   "parent":{
-    "name":"ProjetoGAme",
-    "path":"ProjetoGAme.yyp",
+    "name":"ProjetoGamePreProva3(github)",
+    "path":"ProjetoGamePreProva3(github).yyp",
   },
   "parentRoom":null,
   "physicsSettings":{

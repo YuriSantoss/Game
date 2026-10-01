@@ -1,0 +1,1 @@
+texto = "Segure Z ou aperte 2 vezes\n para pular mais alto";

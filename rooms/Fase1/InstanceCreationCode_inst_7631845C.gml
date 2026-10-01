@@ -1,0 +1,1 @@
+texto = "Aperte a setinha para \n cima para salvar";

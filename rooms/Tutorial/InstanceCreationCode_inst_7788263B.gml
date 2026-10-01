@@ -1,0 +1,1 @@
+texto = "Aperte C para lancar o Ataque\n Aperte V para jogar fora o Ataque";

@@ -1,0 +1,1 @@
+texto = "Colocar um espiinho que mata ele e\n faz voltar para antes ";

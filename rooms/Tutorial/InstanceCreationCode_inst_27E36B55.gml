@@ -1,0 +1,1 @@
+texto = "Pegue este item para desbloquear uma nova cor";

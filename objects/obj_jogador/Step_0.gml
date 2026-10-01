@@ -15,42 +15,114 @@ if place_meeting(x + hsp, y, obj_parede)
 	hsp = 0
 }
 
-x += hsp
+x += hsp 
 
-//Em Y
+// Colisão vertical (mantida igual)
 if place_meeting(x, y + vsp, obj_parede)
 {
 	while !place_meeting(x, y + sign(vsp), obj_parede)
 	{
-		y += sign(vsp)
+		y += sign(vsp);
 	}
-	
-	vsp = 0
+	vsp = 0;
 }
+y += vsp; 
 
-y += vsp
+// . Atualizar Temporizadores
+coyote_time -= 1;
+jump_buffer -= 1;
 
-//Pulo --------------------------------------------------------------------
-if  place_meeting(x, y + 1, obj_parede)
-{
-	pulos = 2
-}
-else 
-{
-	vsp += grav
-	
-	var limite_queda = 8; 
-	
-    if (vsp > limite_queda) 
-    {
+// . Chão e Gravidade -----------------------------------------------------
+if place_meeting(x, y + 1, obj_parede) {
+    coyote_time = coyote_max; // Recarrega o tempo do Coyote
+    pulos = 2; // Recarrega os pulos
+} else {
+    vsp += grav;
+    
+    // Limite de velocidade de queda
+    if (vsp > limite_queda) {
         vsp = limite_queda;
     }
-	
+    
+    // Se o Coyote Time acabar e ainda estivermos com 2 pulos, 
+    // significa que caímos da plataforma. Retiramos o primeiro pulo.
+    if (coyote_time <= 0 && pulos == 2) {
+        pulos = 1; 
+    }
 }
-if keyboard_check_pressed(ord("Z")) && pulos > 0
-{
-	vsp = pulo
-	pulos -= 1
+
+// . Registrar a intenção de pulo (Jump Buffer) ---------------------------
+if keyboard_check_pressed(ord("Z")) {
+    jump_buffer = jump_buffer_max; // Salva que o botão foi apertado agora
+}
+
+//  Execução do Pulo -----------------------------------------------------
+// Se temos um pulo salvo no buffer E temos pulos disponíveis:
+if (jump_buffer > 0) && (pulos > 0) {
+    
+    // Consumimos o buffer e o coyote time para não pular repetido acidentalmente
+    jump_buffer = 0;
+    coyote_time = 0;
+
+    if (pulos == 2) {
+        // Primeiro pulo (a partir do chão ou durante o Coyote Time)
+        vsp = pulo; 
+    } else {
+        // Pulo duplo: multiplica por 0.8 para ser mais fraco que o primeiro (ex: -7 vira -5.6)
+        vsp = pulo * 0.8;
+        
+        // Removemos o seu "vsp -= 1" pois forçar o vsp direto já zera o momentum de queda
+    }
+    
+    pulos -= 1;
+}
+
+// 5. Pulo Variável (Soltar o botão no ar) ---------------------------------
+if keyboard_check_released(ord("Z")) && vsp < 0 {
+    vsp *= 0.5; // Reduz a velocidade de subida pela metade para um pulo curtinho
+}
+
+
+//VIDA ----------------------------------------------------------------------------------
+
+// 1. Controle do tempo de invencibilidade
+if (invencivel) {
+    tempo_invencivel -= 1; // Diminui o tempo
+    
+    // Faz o sprite "piscar" (fica invisível e visível rápido)
+    if (tempo_invencivel % 10 < 5) {
+        image_alpha = 0; // Fica transparente
+    } else {
+        image_alpha = 1; // Fica visível
+    }
+    
+    // Quando o tempo acaba, volta ao normal
+    if (tempo_invencivel <= 0) {
+        invencivel = false;
+        image_alpha = 1; // Garante que não vai ficar invisível para sempre
+    }
+}
+
+// tomar Dano
+if (!invencivel) {
+    // Checa se encostou em um inimigo (Crie um objeto chamado obj_inimigo para testar)
+    var _inimigo = instance_place(x, y, obj_inimigo);
+    
+    if (_inimigo != noone) {
+        hp -= 1;              // Perde 1 de vida
+        invencivel = true;    // Fica invencível
+        tempo_invencivel = 60; // Fica invencível por 60 frames (1 segundo)
+        
+        // Empurrãozinho (Knockback) para trás
+        vsp = -4; // Pula um pouquinho
+        hsp = sign(x - _inimigo.x) * 4; // É empurrado para o lado contrário do inimigo
+        
+        // Checa se morreu
+        if (hp <= 0) {
+            // Reinicia a fase (ou você pode mandar para a tela de Game Over / Menu)
+            room_restart(); 
+        }
+    }
 }
 
 //Ataque --------------------------------------------------------------------
@@ -64,7 +136,7 @@ if (move != 0) {
     image_xscale = move; // 1 para direita, -1 para esquerda
 }
 
-// 2. Código do ataque --------------------------------------------------------------------
+// 2. Código do ataque (TECLA X) --------------------------------------------------------------------
 if (pegou_arma == true) {
 	
 	if (keyboard_check_pressed(ord("X"))) {
@@ -85,14 +157,18 @@ if (pegou_arma == true) {
 		inst.alarm[0] = 15;
 	
 		atacando = true;
-	    sprite_index = Protagonista_Attack; // Sprite do ataque
-	    image_index = 0; // Começa a nimação do zero
+	    sprite_index = Protagonista_Attack; // Sprite do ataque com X
+	    image_index = 0; // Começa a animação do zero
 
 	    // Faz a fila andar 
 	    avancar_e_repor();
+		global.fila_salva = cores;
+		
+		
 	}
 }
-//Ataque e Cores --------------------------------------------------------------------
+
+//Ataque e Cores (TECLAS C e V) --------------------------------------------------------------------
 
 /* Desbloqueio de cores
 if (Amarelin == true || Verdin == true || Roxin == true || Laranjin == true){ //Aumenta o tamanho da roda com mais cores **** ACHO MELHOR DEIXAR SÓ em 3 MESMO***
@@ -103,7 +179,7 @@ if (Amarelin == true || Verdin == true || Roxin == true || Laranjin == true){ //
 var _tecla_c = keyboard_check_pressed(ord("C"));
 var _tecla_v = keyboard_check_pressed(ord("V")); //Limpar (V)
 
-// Função para o Ataque (ID é pra ser o sprite)
+// Função para o Ataque C e V (não mudam o sprite do jogador, apenas criam o tiro/descarte)
 
 if (pegou_arma == true) {
 	
@@ -111,10 +187,6 @@ if (pegou_arma == true) {
     
 	    if (_tecla_c) {
 	        var cor_usada = cores[0]; // Pega a cor que está na frente
-		
-	         atacando = true;
-	      //  sprite_index = spr_jogador_atirando; // Srite atirando (não fiz ainda) (descomentar quando eu fizer
-	      //  image_index = 0;
 		
 	        var _meu_ataque = instance_create_layer(x, y - 18, "Instances", obj_ataque);
 
@@ -148,25 +220,26 @@ if (pegou_arma == true) {
 	        }
 	    } 
 		else if (_tecla_v) {
-        
-	        atacando = true;
-	        // sprite_index = spr_jogador_descartando; // Sprite descartando (não fiz ainda)
-	        // image_index = 0;
-        
-	    }
+            // Apenas descarte, sem mexer no sprite do jogador
+        }
 	
 	    // se for 'v' (descarte), pula o switch de carregar sprite de ataque
 
 	    // Executa o shift unificado
 	    avancar_e_repor();
+		global.fila_salva = cores;
 	}
 
 }
 
-// Animação Ataque e Troca de Spites -------------------------------------------------------
+// Animação Ataque (X) e Troca de Sprites -------------------------------------------------------
 
-//Atacando
+// Se estiver atacando com o X
 if (atacando == true) {
+    
+    // Garante que o sprite rodando é o de ataque e velocidade normal
+    sprite_index = Protagonista_Attack;
+    image_speed = 1;
     
     // Confere se a animação do sprite atual chegou no último frame
     if (image_index >= image_number - 1) {
@@ -174,42 +247,99 @@ if (atacando == true) {
     }
     
 } 
-// Não atacan
+// Se NÃO estiver atacando, faz o controle normal de movimento, pulo e arma
 else {
     
-    // Não pegou o item
-    if (pegou_arma == false) {
+    // Verifica se está no ar
+    if (!place_meeting(x, y + 1, obj_parede)) {
         
-        // Verifica se está no ar
-        if (!place_meeting(x, y + 1, obj_parede)) {
-            sprite_index = Protagonista_Jump; // Srite de Pulo
-        } 
-        // Verifica se está andando
-        else if (movx != 0) {
-            sprite_index = Protagonista_walk; //sprite correndo normal
-        } 
-        //Idle dele
-        else {
-            sprite_index = Protagonista_Idle; // sprite parado normal
+        // 1. Dizemos qual é a sprite única do pulo
+        sprite_index = Protagonista_Jump; 
+        
+        // 2. Trava a animação para ele não ficar alternando entre subir e cair sem parar
+        image_speed = 0; 
+        
+        // 3. Escolhe o quadro manual baseado na velocidade vertical (vsp)
+        if (vsp < 0) {
+            // Subindo (vsp negativo) -> Toca o primeiro frame
+            image_index = 0;
+        } else {
+            // Caindo (vsp positivo) -> Toca o segundo frame
+            image_index = 1;
         }
         
     } 
-    // Se o jogador pegou a arma
+    // Se estiver no chão
     else {
         
-        // Verifica se está no ar
-        if (!place_meeting(x, y + 1, obj_parede)) {
-            sprite_index = Protagonista_Jump; // Sprite com a arma de pulo
-        } 
-        // Verifica se está andando
-        else if (movx != 0) {
-            sprite_index = Protagonista_walk; // Sprite  com a arma correndo
-        } 
-        // Idleo
-        else {
-            sprite_index = Protagonista_Idle_Arma; // Sprite  com a arma parado
-        }
+        // 4. DEVOLVE a velocidade da animação quando pisar no chão
+        image_speed = 1; 
         
+        // Se o jogador NÃO pegou a arma
+        if (pegou_arma == false) {
+            
+            // Verifica se está andando ou parado
+            if (movx != 0) {
+                sprite_index = Protagonista_walk; // sprite correndo normal
+            } else {
+                sprite_index = Protagonista_Idle; // sprite parado normal
+            }
+            
+        } 
+        // Se o jogador JÁ pegou a arma
+        else {
+            
+            // Verifica se está andando ou parado com a arma
+            if (movx != 0) {
+                sprite_index = Protagonista_walk; // Sprite correndo com a arma
+            } else {
+                sprite_index = Protagonista_Idle_Arma; // Sprite parado com a arma
+            }
+            
+        }
     }
+}
+
+// FALAS ----------------------------------------------------------------
+
+if (keyboard_check_pressed(vk_up) && place_meeting(x, y, obj_npc)) {
     
+    // flag para n bugar e aparecer varios
+    if (!instance_exists(obj_falas)) {
+        var _caixa = instance_create_layer(0, 0, "Instances", obj_falas);
+        
+        // Substitui o texto padrão pelo texto do NPC
+        _caixa.textos = [
+            "Você encontrou a espada perdida!",
+            "Cuidado com os monstros adiante."
+        ];
+    }
+}
+
+//TELA PRETA --------------------------------------------------
+
+// Se a transição foi acionada
+if (global.transicao_ativa) {
+    // Escurece a tela gradualmente
+    global.transicao_alfa += 0.05; 
+
+    // Quando a tela estiver totalmente preta (alfa 1)
+    if (global.transicao_alfa >= 1) {
+        global.transicao_alfa = 1;
+
+        // 1. Muda de sala no escuro primeiro!
+        room_goto(global.transicao_alvo);
+
+        // 2. Força o jogador (que acabou de nascer na sala nova) a ir para o destino exato imediatamente
+        x = global.novo_x;
+        y = global.novo_y;
+
+        // Começa a clarear a tela de volta
+        global.transicao_ativa = false;
+    }
+} else {
+    // Se não está mudando de sala, clareia a tela suavemente até sumir o preto
+    if (global.transicao_alfa > 0) {    
+        global.transicao_alfa -= 0.05;
+    }
 }

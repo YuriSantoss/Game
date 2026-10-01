@@ -28,8 +28,8 @@
   "resourceVersion":"2.0",
   "solid":false,
   "spriteId":{
-    "name":"spr_amarelin",
-    "path":"sprites/spr_amarelin/spr_amarelin.yy",
+    "name":"amarelin",
+    "path":"sprites/amarelin/amarelin.yy",
   },
   "spriteMaskId":null,
   "visible":true,

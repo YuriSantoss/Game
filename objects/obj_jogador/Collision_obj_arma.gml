@@ -3,6 +3,7 @@ vx = 3;
 
 // Informa que pegou
 pegou_arma = true;
+global.pegou_arma = true;
 
 //Muda o sprite para o dele com a Arma
 sprite_index = Protagonista_Idle_Arma; 
